@@ -74,9 +74,9 @@ day.sum <- function(object = NULL, ID = NULL, sunrise = NULL, sunset = NULL) {
     colnames(MeanOffDur) <- c("Date", "MeanOffDur")
     
     OnCount <-  aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "Date"]), FUN = length)
-    colnames(MeanOnDur) <- c("Date", "OnCount")
+    colnames(OnCount) <- c("Date", "OnCount")
     OffCount <-  aggregate(x = object[object$typ == "out", "typ"], by = list(object[object$typ == "out", "Date"]), FUN = length)
-    colnames(MeanOnDur) <- c("Date", "OffCount")
+    colnames(OffCount) <- c("Date", "OffCount")
     
     MeanOnT <-  aggregate(x = object[object$typ == "in", "meanT"], by = list(object[object$typ == "in", "Date"]), FUN = mean)
     colnames(MeanOnT) <- c("Date", "MeanOnT")
@@ -86,7 +86,9 @@ day.sum <- function(object = NULL, ID = NULL, sunrise = NULL, sunset = NULL) {
     minT <-  aggregate(x = object[, "minT"], by = list(object[, "Date"]), FUN = min)
     colnames(minT) <- c("Date", "MinT")
     maxT <-  aggregate(x = object[, "maxT"], by = list(object[, "Date"]), FUN = max)
-    colnames(maxT) <- c("Date", "maxT")    
+    colnames(maxT) <- c("Date", "maxT")
+    
+    merge()
   }
   
 }
