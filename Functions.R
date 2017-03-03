@@ -3,10 +3,6 @@
 #Nghia Tran oct 28th 2016. tran.ng91@gmail.com
 
 # rm(list=ls())
-# setwd("/Users/Tran_ng/Dropbox/Nghia BackUp/Hirondelles/Thermocrons/data/NT/2010-2016/Clean/DayTime")
-# object = read.table("200620121b.csv", header = TRUE, sep = ",")
-# # object = read.table("120120121a.csv", header = TRUE, sep = ",")
-# object = read.table(i, header = TRUE, sep = ",")
 
 #Argugument Legends
 #bof()
@@ -44,9 +40,8 @@
 #num: sequence numbers for the bouts. (>0: on bout, <0: off bout)
 
 #Debugger
-# iB <- read.table("/Users/Tran_ng/Dropbox/Nghia BackUp/Hirondelles/Thermocrons/data/NT/2010-2016/Clean/DayTime/360820161a.csv", sep = ",", header = TRUE)
+# object <- read.table("TestData.csv", header = TRUE, sep = ",")
 # pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 2
-
 
 #' On-bouts and off-bout detection.
 #' 
