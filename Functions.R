@@ -2,10 +2,6 @@
 #Same as the script named fanie_0.36.3.r but modified by Nghia Tran
 #Nghia Tran oct 28th 2016. tran.ng91@gmail.com
 
-# TheBofBetaSpeed: I will try to optimize this scrit, see TheBofBeta for an olderversion.
-
-
-
 # rm(list=ls())
 # setwd("/Users/Tran_ng/Dropbox/Nghia BackUp/Hirondelles/Thermocrons/data/NT/2010-2016/Clean/DayTime")
 # object = read.table("200620121b.csv", header = TRUE, sep = ",")
