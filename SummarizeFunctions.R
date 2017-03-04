@@ -1,5 +1,16 @@
 #Creates a table from an object processed by bof()
 library(lubridate)
+# Debugger ####
+# source("Bof.R")
+# source("SummarizeFunctions.R")
+# 
+# DayNightData<- read.table("DayNightData.csv", sep = ",", header = TRUE)
+# boffed <- bof(object = DayNightData)
+# 
+# object = boffed; obs.lag = 2; ID = "Test"; dur.units = "mins"
+# ###
+
+# Table.bof ####
 
 table.bof <- function(object, obs.lag = 2, ID = NULL, dur.units = "mins"){
   
@@ -16,24 +27,26 @@ table.bof <- function(object, obs.lag = 2, ID = NULL, dur.units = "mins"){
   # }
   
   BeginTime <- aggregate(object$DateTime, list(object$num), min)
-  BeginTime <- BeginTime$x - minutes(obs.lag)
+  BeginTime$x <- BeginTime$x - minutes(obs.lag)
   EndTime <- aggregate(object$DateTime, list(object$num), max)
-  Duration <- rep(NA, length.out = nrow(BeginTime))
+  # Duration <- rep(NA, length.out = nrow(BeginTime))
   minT <- aggregate(object$temp, list(object$num), min)
   maxT <- aggregate(object$temp, list(object$num), max)
   mean <- aggregate(object$temp, list(object$num), mean)
   depth <- aggregate(object$dif, list(object$num), sum)
   typ <- aggregate(object$typ, list(object$num), unique)
-  DayStart <- aggregate(as.POSIXct(object$DayStart, format = "%H:%M:%S"), list(object$num), min)
-  DayEnd <- aggregate(as.POSIXct(object$DayEnd, format = "%H:%M:%S"), list(object$num), min)
+  # DayStart <- aggregate(as.POSIXct(object$DayStart, format = "%H:%M:%S"), list(object$num), min)
+  # DayEnd <- aggregate(as.POSIXct(object$DayEnd, format = "%H:%M:%S"), list(object$num), min)
   
   if(is.null(ID)){
-    table <- data.frame(EndTime$Group.1, BeginTime$x, EndTime$x, Duration, minT$x, maxT$x, mean$x, depth$x ,typ$x, strftime(DayStart$x, format = "%H:%M:%S"), strftime(DayEnd$x, format = "%H:%M:%S"))
+    # table <- data.frame(EndTime$x, BeginTime$x, EndTime$x, NA, minT$x, maxT$x, mean$x, depth$x ,typ$x, strftime(DayStart$x, format = "%H:%M:%S"), strftime(DayEnd$x, format = "%H:%M:%S"))
+    table <- data.frame(EndTime$Group.1, BeginTime$x, EndTime$x, NA, minT$x, maxT$x, mean$x, depth$x ,typ$x)
     colnames(table) <- c("nbout", "BeginTime", "EndTime", "duration","minT", "maxT","meanT", "depthT","typ")
   }
   
   if(!is.null(ID)){
-    table <- data.frame(ID, EndTime$Group.1, BeginTime$x, EndTime$x, Duration, minT$x, maxT$x, mean$x, depth$x ,typ$x, strftime(DayStart$x, format = "%H:%M:%S"), strftime(DayEnd$x, format = "%H:%M:%S"))
+    # table <- data.frame(ID, EndTime$x, BeginTime$x, EndTime$x, NA, minT$x, maxT$x, mean$x, depth$x ,typ$x, strftime(DayStart$x, format = "%H:%M:%S"), strftime(DayEnd$x, format = "%H:%M:%S"))
+    table <- data.frame(ID, EndTime$Group.1, BeginTime$x, EndTime$x, NA, minT$x, maxT$x, mean$x, depth$x ,typ$x)
     colnames(table) <- c("ID", "nbout", "BeginTime", "EndTime", "duration","minT", "maxT","meanT", "depthT","typ")
   }
   
