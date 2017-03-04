@@ -8,3 +8,5 @@ These functions are usable but need to be formated into a package format. Also, 
 
 If you have any modification, feel free to communicate with Nghia Tran at tran.ng91@gmail.com
 
+Also part of the developpment process; Gabriel Pigeon and Fanie Pelletier
+
