@@ -6,5 +6,7 @@ Theses functions were built in order to analyse temperature data in order to det
 
 These functions are usable but need to be formated into a package format. Also, the functions need to be optimized in order to speed up the analysis process. Improvement can be made by  a more straighforward engineering process or vectorisation of the many loops.
 
+Files should also be organized in a more conventional layout. (instead of having everything thrown into one folder...)
+
 If you have any modification, feel free to communicate with Nghia Tran at tran.ng91@gmail.com
 

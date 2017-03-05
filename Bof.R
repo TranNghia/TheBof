@@ -23,7 +23,7 @@
 #nwindow: Within a cooling period, the maximum time (in reading) that the threshold (nT) needs to be attained for the program to detect an offbout.
 #pwindow: Within a warming period, the maximum time (in reading) that the threshold (pT) needs to be attained for the program to detect an onbout.  
 #nullwindow: If some consecutive temperature reading are of the same values, those reading can be included in the previous warming/cooling period.  
-#            The maximum number of reading with no temperature change allowed to be considered in the previous warming/cooling period.
+#           The maximum number of reading with no temperature change allowed to be considered in the previous warming/cooling period.
 
 
 #Output Table Legend
