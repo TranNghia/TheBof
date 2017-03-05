@@ -3,7 +3,7 @@
 # rm(list=ls())
 
 #Debugger
-# object <- read.table("TestData.csv", header = TRUE, sep = ",")
+# object <- read.table("DayData.csv", header = TRUE, sep = ",")
 # pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 2
 
 #Argugument Legends
@@ -52,7 +52,8 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   colnames(object)[pos] <- "temp"
   le=nrow(object)
   object$DateTime <- as.POSIXct(strptime(object$DateTime, format=time.format))
-  row.names(object) <- c(1:nrow(object))
+  # row.names(object) <- c(1:nrow(object)) # instead of using row.names, will use a column as this bug when using fread
+  object$rn <- 1:nrow(object)
   
   object$tdif <- c(NA, difftime(object$DateTime[2:le], object$DateTime[1:(le-1)], units = "mins")) 
   
@@ -77,93 +78,160 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   # }
   
   # Sequencing the period for which dif == 0 ####
-  
-  kk <- 1
-  dat <- subset(object, object[,"dif"] == 0 & is.na(object[, "dif"]) == FALSE & is.na(object[, "tdif"]) == FALSE )
-  # dat <- object[object$dif == 0 & !is.na(object$dif) & !is.na(object$tdif), ]
-  # dat <- base::subset(object, object$dif == 0 & is.na(object$dif) == FALSE & is.na(object$tdif) == FALSE )
-  rn <- as.numeric(rownames(dat))
-  
-  if(length(rn) > 0){
+  # Non vectorised sequencing 
+  {# kk <- 1
+  # dat <- subset(object, object[,"dif"] == 0 & is.na(object[, "dif"]) == FALSE & is.na(object[, "tdif"]) == FALSE )
+  # # dat <- object[object$dif == 0 & !is.na(object$dif) & !is.na(object$tdif), ]
+  # # dat <- base::subset(object, object$dif == 0 & is.na(object$dif) == FALSE & is.na(object$tdif) == FALSE )
+  # # rn <- as.numeric(rownames(dat)) # changed to be compatible with fread()
+  # rn <- as.numeric(dat$rn)
+  # 
+  #   
+  # if(length(rn) > 0){
+  #   
+  #   if(length(rn) == 1){object$numnull[rn] <- 1
+  #   }else{
+  #     Z <- vector()
+  #     Z[1] <- 1
+  #     for( i in 2:length(rn) ){
+  #       if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] == obs.lag) { Z[i] <- kk }
+  #       else { kk <- kk+1; Z[i] <- kk }
+  #     }
+  #     dat$Z <- Z
+  #     # object$numnull <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA) # change for fread compatibility
+  #     object$numnull <- ifelse(object$rn %in% object$rn, dat$Z[match(object$rn, dat$rn)],NA)
+  #   }
+  # }
+}
     
-    if(length(rn) == 1){object$numnull[rn] <- 1
-    }else{
-      Z <- vector()
-      Z[1] <- 1
-      for( i in 2:nrow(dat) ){
-        if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] == obs.lag) { Z[i] <- kk }
-        else { kk <- kk+1; Z[i] <- kk }
-      }
-      dat$Z <- Z
-      object$numnull <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
-    }
+  dat <- subset(object,object[,"dif"] == 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
+  
+  if(nrow(dat > 0)) {
+    rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
+    dat <- cbind(dat, rn2)
+    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, 1)
+    dat$eq[1] <- 1
+    dat$Z <- cumsum(dat$eq)
+    
+    object$numnull <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
+  
+    # Including the null section or not to previous sections (nullwindow argument) ####
+    
+    nulllength <- aggregate(object$numnull, list(object$numnull), length)
+    colnames(nulllength) <- c("numnull", "lenull")
+    object$lenull <- nulllength[match(object$numnull, nulllength$numnull), "lenull"]
+    rm(nulllength)
+    
+    # 
+    # for(i in 2:nrow(object)){
+    #   if(!is.na(object$lenull[i]) & !is.na(object$dif[i-1]) & object$lenull[i] <= nullwindow){
+    #     if(object$dif[i-1] < 0) {object$dif[i] <- -1e-6}
+    #     if(object$dif[i-1] > 0) {object$dif[i] <- 1e-6}
+    #   }
+    # }
+    
+    rn <- object[object$lenull <= nullwindow & !is.na(object$lenull), "rn"] 
+    rn2 <- rn - 1
+    df.null <- data.frame(rn, object[object$rn %in% rn2, "dif"], object[object$rn %in% rn, "dif"])
+    colnames(df.null) <- c("rn", "dif.rn2", "dif")
+    df.null[df.null$dif.rn2 > 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(1e-6)
+    df.null[df.null$dif.rn2 < 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(-(1e-6))
+    
+    object[object$rn %in% rn, "dif"] <- df.null$dif
+    
+    object <- object[ ,-(which(colnames(object) == "lenull"))]
+    rm(df.null)
   }
-
-  # Including the null section or not to previous sections (nullwindow argument) ####
   
-  nulllength <- aggregate(object$numnull, list(object$numnull), length)
-  colnames(nulllength) <- c("numnull", "lenull")
-  object$lenull <- nulllength[match(object$numnull, nulllength$numnull), "lenull"]
-  rm(nulllength)
-  
-  for(i in 2:nrow(object)){
-    if(!is.na(object$lenull[i]) & !is.na(object$dif[i-1]) & object$lenull[i] <= nullwindow){
-      if(object$dif[i-1] < 0) {object$dif[i] <- -1e-6}
-      if(object$dif[i-1] > 0) {object$dif[i] <- 1e-6}
-    }
-  }
-  
-  object <- object[ , -c(5,6)]
   
   # Sequencing the warming periods ####
   
-  kk <- 1
   dat <- subset(object,object[,"dif"] > 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
-  rn <- as.numeric(rownames(dat))
-  Z <- vector()
-  Z[1] <- 1
-  for( i in 2:nrow(dat) ){
-    if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] <= obs.lag) { Z[i] <- kk }
-    else { kk <- kk+1; Z[i] <- kk }
+  
+  if(nrow(dat > 0)) {
+    rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
+    dat <- cbind(dat, rn2)
+    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, 1)
+    dat$eq[1] <- 1
+    dat$Z <- cumsum(dat$eq)
+  
+    object$numpos <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
   }
-  dat$Z <- Z
-  object$numpos <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
+  
+  # rn <- as.numeric(rownames(dat))
+  # Z <- vector()
+  # Z[1] <- 1
+  # for( i in 2:nrow(dat) ){
+  #   if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] <= obs.lag) { Z[i] <- kk }
+  #   else { kk <- kk+1; Z[i] <- kk }
+  # }
+  # dat$Z <- Z
+
+  # object$numpos <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
+  
+  
+  
   
   # Sequencing the cooling periods ####
   
-  dat <- subset(object,object[,"dif"] < 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE)
-  rn <- as.numeric(rownames(dat))
-  Z <- vector()
-  Z[1] <- 1
-  kk <- 1
-  for (i in 2:nrow(dat)){
-    if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] <= obs.lag ){ Z[i] <- kk }
-    else {kk <- kk+1; Z[i] <- kk}
-  }
-  dat$Z <- Z
-  object$numneg <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
+  # dat <- subset(object,object[,"dif"] < 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE)
+  # rn <- as.numeric(rownames(dat))
+  # Z <- vector()
+  # Z[1] <- 1
+  # kk <- 1
+  # for (i in 2:nrow(dat)){
+  #   if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] <= obs.lag ){ Z[i] <- kk }
+  #   else {kk <- kk+1; Z[i] <- kk}
+  # }
+  # dat$Z <- Z
+  # object$numneg <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
+  # 
+  
+  dat <- subset(object,object[,"dif"] < 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
+  
+  if(nrow(dat > 0)) {
+    rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
+    dat <- cbind(dat, rn2)
+    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, -1)
+    dat$eq[1] <- -1
+    dat$Z <- cumsum(dat$eq)
+    
+    object$numneg <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
+  }  
   
   # Resequencing the stable periods ####
-  kk <- 1
-  object$numnull <- as.integer(NA) 
-  dat <- subset(object,object[,"dif"] == 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
-  rn <- as.numeric(rownames(dat))
-  
-  if(length(rn) > 0){
-    
-    if(length(rn) == 1){object$numnull[rn] <- 1
-    }else{
-      Z <- vector()
-      Z[1] <- 1
-      for( i in 2:nrow(dat) ){
-        if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] == obs.lag) { Z[i] <- kk }
-        else { kk <- kk+1; Z[i] <- kk }
-      }
-      dat$Z <- Z
-      object$numnull <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
-    }
-  }
+  # kk <- 1
+  # object$numnull <- as.integer(NA) 
+  # dat <- subset(object,object[,"dif"] == 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
+  # rn <- as.numeric(rownames(dat))
+  # 
+  # if(length(rn) > 0){
+  #   
+  #   if(length(rn) == 1){object$numnull[rn] <- 1
+  #   }else{
+  #     Z <- vector()
+  #     Z[1] <- 1
+  #     for( i in 2:nrow(dat) ){
+  #       if( rn[i] == I(rn[i-1]+1) & dat$tdif[i] == obs.lag) { Z[i] <- kk }
+  #       else { kk <- kk+1; Z[i] <- kk }
+  #     }
+  #     dat$Z <- Z
+  #     object$numnull <- ifelse(rownames(object) %in% rownames(dat),dat$Z[match(rownames(object),rownames(dat))],NA)
+  #   }
+  # }
 
+  dat <- subset(object,object[,"dif"] == 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
+  
+  if(nrow(dat > 0)) {
+    rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
+    dat <- cbind(dat, rn2)
+    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, 1)
+    dat$eq[1] <- 1
+    dat$Z <- cumsum(dat$eq)
+    
+    object$numnull <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
+  }
+  
   # Calculate cooling and warming periods length ####
   
   neg <- with(object[is.na(object$numneg)==F,],matrix(c(tapply(dif,numneg,sum),tapply(dif,numneg,length)),byrow=FALSE,ncol=2))
@@ -176,19 +244,34 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   #T could rise and reach the threshold but if it takes an hour to reach this therhold, it's likely not due to a bird starting a bout
   # pTle ####
   
-  object$pTle <- as.integer(NA) #This will become the number of reading it took within a bout (numpos or numneg) to reach nT or pT
-  z <- unique(na.exclude(object$numpos))
+  # object$pTle <- as.integer(NA) #This will become the number of reading (i.e. "time") it took within a bout (numpos or numneg) to reach nT or pT
+  # z <- unique(na.exclude(object$numpos))
+  # 
+  # for(i in z){
+  #   # i = z[2]
+  #   a <- cumsum(object$dif[object$numpos == i & !is.na(object$numpos)]) # A vector of cumulative sum in temperature difference
+  #   
+  #   b <- object$sum[object$numpos == i & !is.na(object$numpos)][1] #The temperature rise within this warming period
+  #   
+  #   if(b > pT){
+  #     object$pTle[object$numpos == i & !is.na(object$numpos)] <- min(which(a > pT))
+  #   }
+  # }
   
-  for(i in z){
-    # i = z[2]
-    a <- cumsum(object$dif[object$numpos == i & !is.na(object$numpos)]) # A vector of cumulative sum in temperature difference
-    
-    b <- object$sum[object$numpos == i & !is.na(object$numpos)][1] #The temperature rise within this warming period
-    
-    if(b > pT){
-      object$pTle[object$numpos == i & !is.na(object$numpos)] <- min(which(a > pT))
-    }
-  }
+  #
+  dat <- object[object$sum >= pT & !is.na(object$sum), ]
+  cumsum <- aggregate(dat$dif, by = list(dat$numpos), FUN = cumsum)
+  
+  dat$cumsum <- unlist(cumsum$x)
+  dat$a <- ifelse(dat$cumsum >= pT, 0, 1)
+  cumsum <- aggregate(dat$a, by = list(dat$numpos), cumsum)
+  dat$b <- unlist(cumsum$x)  
+  maxb <- aggregate(dat$b, by = list(dat$numpos), max)
+  colnames(maxb) <- c("numpos", "pTle")
+  dat <- merge(dat, maxb, by = "numpos", all.x = TRUE)
+  
+  object$pTle <- ifelse(object$rn %in% dat$rn, dat$pTle[match(object$rn, dat$rn)], NA)
+  object[!is.na(object$pTle), "pTle"] <- object[!is.na(object$pTle), "pTle"] + 1  
   
   # nTle ####
   object$nTle <- as.integer(NA) #This will become the number of reading it took within a bout (numpos or numneg) to reach nT or pT
@@ -259,4 +342,5 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   class(object) <- c("bof","data.frame")
   object
-}
+  }
+  
