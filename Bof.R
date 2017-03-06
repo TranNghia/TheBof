@@ -2,9 +2,10 @@
 
 # rm(list=ls())
 
-#Debugger
+# Debugger
 # object <- read.table("DayData.csv", header = TRUE, sep = ",")
 # pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 2
+
 
 #Argugument Legends
 #bof()
@@ -234,11 +235,17 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   # Calculate cooling and warming periods length ####
   
-  neg <- with(object[is.na(object$numneg)==F,],matrix(c(tapply(dif,numneg,sum),tapply(dif,numneg,length)),byrow=FALSE,ncol=2))
-  pos <- with(object[is.na(object$numpos)==F,],matrix(c(tapply(dif,numpos,sum),tapply(dif,numpos,length)),byrow=FALSE,ncol=2))
-  object$sum <- ifelse(is.na(object$numneg)==FALSE,neg[match(object$numneg,row(neg)),1],pos[match(object$numpos,row(pos)),1])
-  object$le <- ifelse(is.na(object$numneg)==FALSE,neg[match(object$numneg,row(neg)),2],pos[match(object$numpos,row(pos)),2])
+  neg <- with(object[is.na(object$numneg)==F,], matrix(c(sort(na.exclude(unique(object$numneg)), decreasing = FALSE),tapply(dif,numneg,sum),tapply(numneg,numneg,length)),byrow=FALSE,ncol=3))
+  colnames(neg) <- c("numneg", "sum", "le"); neg <- data.frame(neg)
+  pos <- with(object[is.na(object$numpos)==F,], matrix(c(na.exclude(unique(object$numpos)),tapply(dif,numpos,sum),tapply(dif,numpos,length)),byrow=FALSE,ncol=3))
+  colnames(pos) <- c("numpos", "sum", "le"); pos <- data.frame(pos)
+
+  object$sum <- ifelse(is.na(object$numneg)==FALSE, neg[match(object$numneg,neg$numneg), "sum"], pos[match(object$numpos,pos$numpos), "sum"])
+  object$le <- ifelse(is.na(object$numneg)==FALSE, neg[match(object$numneg,neg$numneg), "le"], pos[match(object$numpos,pos$numpos), "le"])
   
+  # object$sum <- ifelse(is.na(object$numneg)==FALSE, neg[match(object$numneg,row(neg)),1], pos[match(object$numpos,row(pos)),1])
+  # object$le <- ifelse(is.na(object$numneg)==FALSE, neg[match(object$numneg,row(neg)),2], pos[match(object$numpos,row(pos)),2])
+   
   
   #NT: We need some way to specify to the program that the threshold must be reached whitin a given time window. 
   #T could rise and reach the threshold but if it takes an hour to reach this therhold, it's likely not due to a bird starting a bout
@@ -264,33 +271,43 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   dat$cumsum <- unlist(cumsum$x)
   dat$a <- ifelse(dat$cumsum >= pT, 0, 1)
-  cumsum <- aggregate(dat$a, by = list(dat$numpos), cumsum)
-  dat$b <- unlist(cumsum$x)  
-  maxb <- aggregate(dat$b, by = list(dat$numpos), max)
-  colnames(maxb) <- c("numpos", "pTle")
-  dat <- merge(dat, maxb, by = "numpos", all.x = TRUE)
+  sum <- aggregate(dat$a, by = list(dat$numpos), sum)
+  colnames(sum) <- c("numpos", "pTle")
   
-  object$pTle <- ifelse(object$rn %in% dat$rn, dat$pTle[match(object$rn, dat$rn)], NA)
+  object$pTle <- ifelse(object$numpos %in% sum$numpos, sum$pTle[match(object$numpos, sum$numpos)], NA)
   object[!is.na(object$pTle), "pTle"] <- object[!is.na(object$pTle), "pTle"] + 1  
   
+  
   # nTle ####
-  object$nTle <- as.integer(NA) #This will become the number of reading it took within a bout (numpos or numneg) to reach nT or pT
-  z <- unique(na.exclude(object$numneg))
-  for(i in z){
-    # i = z[2]
-    a <- cumsum(object$dif[object$numneg == i & !is.na(object$numneg)])
-    
-    b <- object$sum[object$numneg == i & !is.na(object$numneg)][1]
-    if(b < nT){
-      object$nTle[object$numneg == i & !is.na(object$numneg)] <- min(which(a < nT))
-    }
-  }
+  # object$nTle <- as.integer(NA) #This will become the number of reading it took within a bout (numpos or numneg) to reach nT or pT
+  # z <- unique(na.exclude(object$numneg))
+  # for(i in z){
+  #   # i = z[2]
+  #   a <- cumsum(object$dif[object$numneg == i & !is.na(object$numneg)])
+  #   
+  #   b <- object$sum[object$numneg == i & !is.na(object$numneg)][1]
+  #   if(b < nT){
+  #     object$nTle[object$numneg == i & !is.na(object$numneg)] <- min(which(a < nT))
+  #   }
+  # }
+  
+  dat <- object[object$sum <= nT & !is.na(object$sum), ]
+  cumsum <- aggregate(dat$dif, by = list(dat$numneg), FUN = cumsum)
+  cumsum <- cumsum[order(cumsum$Group.1, decreasing = TRUE), ]
+  
+  dat$cumsum <- unlist(cumsum$x)
+  dat$a <- ifelse(dat$cumsum <= nT, 0, 1)
+  sum <- aggregate(dat$a, by = list(dat$numneg), sum)
+  colnames(sum) <- c("numneg", "nTle")
+  
+  object$nTle <- ifelse(object$numneg %in% sum$numneg, sum$nTle[match(object$numneg, sum$numneg)], NA)
+  object[!is.na(object$nTle), "nTle"] <- object[!is.na(object$nTle), "nTle"] + 1  
   
  
   # Finding on and off bout starts ####
   
-  object$typ <- ifelse(object$sum > pT & object$le >= plag & object$pTle <= pwindow, "in",
-                       ifelse(object$sum < nT & object$le >= nlag & object$nTle <= nwindow, "out",  NA) )
+  object$typ <- ifelse(object$sum >= pT & object$le >= plag & object$pTle <= pwindow, "in",
+                       ifelse(object$sum <= nT & object$le >= nlag & object$nTle <= nwindow, "out",  NA) )
   
   
   # Disrupted time series ####
@@ -298,20 +315,24 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   object$typ[1] <- ifelse(object$temp[1] >= inctemp,  "in", "out" )
   
-  for(i in 2:nrow(object)){
-    
-    if(object$tdif[i] > obs.lag & !is.na(object$tdif[i])){
-      
-      object$typ[i] <- ifelse(object$temp[i] >= inctemp,  "in", "out" )
-    }
-  }
+  object[object$tdif > obs.lag & !is.na(object$tdif), "typ"] <- ifelse(object[object$tdif > obs.lag & !is.na(object$tdif), "temp"] >= inctemp, "in", "out")
+  
+  # for(i in 2:nrow(object)){
+  #   
+  #   if(object$tdif[i] > obs.lag & !is.na(object$tdif[i])){
+  #     
+  #     object$typ[i] <- ifelse(object$temp[i] >= inctemp,  "in", "out" )
+  #   }
+  # }
   
   # Filling the blank for typ ####
   # using the previous available !is.na value
-  rn <- as.numeric(rownames(object[is.na(object$typ),]))
+  rn <- as.numeric((object[is.na(object$typ), "rn"]))
   for(i in 1:length(rn)){
     object$typ[rn[i]] <- object$typ[rn[i]-1]
   }
+  
+  
   
   # Sequencing the bouts ####
   pk=0

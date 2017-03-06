@@ -10,5 +10,5 @@ Files should also be organized in a more conventional layout. (instead of having
 
 If you have any modification, feel free to communicate with Nghia Tran at tran.ng91@gmail.com
 
-Also part of the developpment process; Gabriel Pigeon and Fanie Pelletier
+Also part of the developpment process; Gabriel Pigeon, Fanie Pelletier and Julien Martin
 
