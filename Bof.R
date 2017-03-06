@@ -327,11 +327,17 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   # Filling the blank for typ ####
   # using the previous available !is.na value
-  rn <- as.numeric((object[is.na(object$typ), "rn"]))
-  for(i in 1:length(rn)){
-    object$typ[rn[i]] <- object$typ[rn[i]-1]
-  }
+  # rn <- as.numeric((object[is.na(object$typ), "rn"]))
+  # for(i in 1:length(rn)){
+  #   object$typ[rn[i]] <- object$typ[rn[i]-1]
+  # }
+  # 
+  # 
+    
+  rn <- object[!is.na(object$typ), "rn"]
+  object$typ <- rep(object$typ[rn], times = diff(c(rn, nrow(object) + 1)))  
   
+
   
   
   # Sequencing the bouts ####
