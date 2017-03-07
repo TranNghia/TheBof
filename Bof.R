@@ -341,33 +341,56 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   
   # Sequencing the bouts ####
-  pk=0
-  nk=0
-  object$num <- as.integer(NA)
-  if(object$typ[1] == "out"){nk <- nk-1 ; object$num[1] <- nk
+  # pk=0
+  # nk=0
+  # object$num <- as.integer(NA)
+  # if(object$typ[1] == "out"){nk <- nk-1 ; object$num[1] <- nk
+  # 
+  # }else{pk <- pk+1 ; object$num[1] <- pk}
+  # 
+  # 
+  # for (j in 2:le){
+  #   
+  #   # j = 2
+  #   
+  #   if(object$typ[j]=="out" & object$tdif[j] > obs.lag) {nk <- nk - 1 ; object$num[j] <- nk}
+  #   
+  #   if(object$typ[j]=="in" & object$tdif[j] > obs.lag) {pk <- pk + 1 ; object$num[j] <- pk  
+  #   
+  #   }else{ 
+  #     
+  #     if (object$typ[j]=="out" & object$typ[j]==object$typ[j-1]) {object$num[j] <- nk}
+  #     if (object$typ[j]=="out" & object$typ[j]!=object$typ[j-1]) {nk <- nk - 1 ; object$num[j] <- nk }
+  #     
+  #     if (object$typ[j]=="in" & object$typ[j]==object$typ[j-1]) {object$num[j] <- pk}
+  #     if (object$typ[j]=="in" & object$typ[j]!=object$typ[j-1]) {pk <- pk + 1 ; object$num[j] <- pk}   
+  #   }      
+  # }
+  # 
+  ####
+  dat <- data.frame(object$rn, object$tdif, c(object[ , "typ"]), c(NA, object[c(1:I(nrow(object)-1)), "typ"]))
+  colnames(dat) <- c("rn", "tdif","a", "b")
   
-  }else{pk <- pk+1 ; object$num[1] <- pk}
+  dat$c <- 0
+  dat$d <- 0
   
+  dat[dat$a == "in" & dat$tdif > obs.lag & !is.na(dat$tdif), "c"] <- 1
+  dat[dat$a == "in" & dat$b == "out" & dat$tdif <= obs.lag & !is.na(obs.lag) & !is.na(dat$b), "c"] <- 1
   
-  for (j in 2:le){
-    
-    # j = 2
-    
-    if(object$typ[j]=="out" & object$tdif[j] > obs.lag) {nk <- nk - 1 ; object$num[j] <- nk}
-    
-    if(object$typ[j]=="in" & object$tdif[j] > obs.lag) {pk <- pk + 1 ; object$num[j] <- pk  
-    
-    }else{ 
-      
-      if (object$typ[j]=="out" & object$typ[j]==object$typ[j-1]) {object$num[j] <- nk}
-      if (object$typ[j]=="out" & object$typ[j]!=object$typ[j-1]) {nk <- nk - 1 ; object$num[j] <- nk }
-      
-      if (object$typ[j]=="in" & object$typ[j]==object$typ[j-1]) {object$num[j] <- pk}
-      if (object$typ[j]=="in" & object$typ[j]!=object$typ[j-1]) {pk <- pk + 1 ; object$num[j] <- pk}   
-    }      
-  }
+  dat[dat$a == "out" & dat$tdif > obs.lag & !is.na(dat$tdif), "d"] <- -1
+  dat[dat$a == "out" & dat$b == "in" & dat$tdif <= obs.lag & !is.na(obs.lag) & !is.na(dat$b), "d"] <- -1
   
+  dat[1, "c"] <- ifelse(dat[1, "a"] == "in", 1, 0) 
+  dat[1, "d"] <- ifelse(dat[1, "a"] == "out", -1, 0) 
+  
+  dat$cumc <- c(cumsum(dat[, "c"]))
+  dat$cumd <- c(cumsum(dat[, "d"]))
+  
+  object$num <- ifelse(object$typ == "in", dat$cumc[match(object$rn, dat$rn)], dat$cumd[match(object$rn, dat$rn)])
+  ####
+    
+    
   class(object) <- c("bof","data.frame")
-  object
+  object[,-which(colnames(object) == "rn")]
   }
   
