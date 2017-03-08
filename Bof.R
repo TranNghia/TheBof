@@ -4,7 +4,7 @@
 
 # Debugger
 # object <- read.table("DayData.csv", header = TRUE, sep = ",")
-# pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 2
+# pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 0
 
 
 #Argugument Legends
@@ -81,7 +81,7 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   # Sequencing the period for which dif == 0 ####
   
   dat <- subset(object,object[,"dif"] == 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
-
+  if(nrow(dat) == 0) {object$numnull <- NA}
   if(nrow(dat > 0)) {
     rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
     dat <- cbind(dat, rn2)
@@ -90,7 +90,7 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
     dat$Z <- cumsum(dat$eq)
 
     object$numnull <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
-
+ 
     # Including the null section or not to previous sections (nullwindow argument) ####
 
     nulllength <- aggregate(object$numnull, list(object$numnull), length)
@@ -107,20 +107,21 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
     # }
 
     rn <- object[object$lenull <= nullwindow & !is.na(object$lenull), "rn"]
-    rn2 <- rn - 1
-    df.null <- data.frame(rn, object[object$rn %in% rn2, "dif"], object[object$rn %in% rn, "dif"])
-    colnames(df.null) <- c("rn", "dif.rn2", "dif")
-    df.null[df.null$dif.rn2 > 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(1e-6)
-    df.null[df.null$dif.rn2 < 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(-(1e-6))
-
-    object[object$rn %in% rn, "dif"] <- df.null$dif
-
-    object <- object[ ,-(which(colnames(object) == "lenull"))]
-    rm(df.null)
-  }
-
-
-  # Sequencing the warming periods ####
+    if(length(rn) > 0) {
+      rn2 <- rn - 1
+      df.null <- data.frame(rn, object[object$rn %in% rn2, "dif"], object[object$rn %in% rn, "dif"])
+      colnames(df.null) <- c("rn", "dif.rn2", "dif")
+      
+      df.null[df.null$dif.rn2 > 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(1e-6)
+      df.null[df.null$dif.rn2 < 0 & !is.na(df.null$dif.rn2), "dif"] <- as.numeric(-(1e-6))
+  
+      object[object$rn %in% rn, "dif"] <- df.null$dif
+  
+      object <- object[ ,-(which(colnames(object) == "lenull"))]
+      rm(df.null)
+    }
+  }  
+# Sequencing the warming periods ####
 
   dat <- subset(object,object[,"dif"] > 0 & is.na(object[,"dif"]) == FALSE & is.na(object[,"tdif"]) == FALSE )
 

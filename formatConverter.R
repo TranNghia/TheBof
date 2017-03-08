@@ -10,7 +10,7 @@ txt.converter <- function(table = NULL, date.col = 1, time.col = 2, temp.col = 3
   
   DateTime <- strptime(paste(table[ , date.col], table[ , time.col], sep = " "), format = paste(date.format, time.format, sep = " "))
   
-  table2 <- data.frame(strftime(DateTime, format = output.format), table[ , temp.col])
+  table2 <- data.frame(DateTime, table[ , temp.col])
   colnames(table2) <- c("DateTime", "Reading")
   
   table2
