@@ -135,14 +135,17 @@ $(document).ready(function () {
 <li>Data should be formated as a two columns object. The first column is a date time object. The second column is the temperature readings. Because of the date time format of the first column, CSV files are ideal. The txt.converter can be used to convert a space delimited file to a compatible format with the function.</li>
 </ul>
 <pre class="r"><code>rm(list = ls())
-Data &lt;- read.table(&quot;DayNightData.txt&quot;, header = FALSE) # This is a .txt file that is not yet ready to be processed with the function
+file.sources = paste(&quot;R/&quot;, list.files(path = &quot;R&quot;, pattern = &quot;*.R&quot;), sep = &quot;&quot;)
+sapply(file.sources,source, .GlobalEnv)
+rm(file.sources)
+
+Data &lt;- read.table(&quot;data/DayNightData.txt&quot;, header = FALSE) # This is a .txt file that is not yet ready to be processed with the function
 head(Data)
 str(Data)</code></pre>
 <ul>
 <li>We can use the txt.convert function to transform the data.frame</li>
 </ul>
-<pre class="r"><code>source(&quot;formatConverter.R&quot;)
-Data2 &lt;- txt.converter(table = Data, date.col = 1, time.col = 2, temp.col = 3, date.format = &quot;%m/%d/%y&quot;, time.format = &quot;%H:%M:%S&quot; )
+<pre class="r"><code>Data2 &lt;- txt.converter(table = Data, date.col = 1, time.col = 2, temp.col = 3, date.format = &quot;%m/%d/%y&quot;, time.format = &quot;%H:%M:%S&quot; )
 str(Data2)</code></pre>
 </div>
 <div id="processing-the-data" class="section level5">
@@ -150,8 +153,7 @@ str(Data2)</code></pre>
 <ul>
 <li>Bof() is the main function. This is the one that will determine on- and off bouts. For now, help menu is not existant but the arguments meaning are available in the Bof.R script.</li>
 </ul>
-<pre class="r"><code>source(&quot;Bof.R&quot;)
-Boffed &lt;- bof(object = Data2, pT = 1, nT = -1.4, obs.lag = 2, plag = 2, nlag = 2, inctemp = 25, nwindow = 5, pwindow = 5, nullwindow = 0)</code></pre>
+<pre class="r"><code>Boffed &lt;- bof(object = Data2, pT = 1, nT = -1.4, obs.lag = 2, plag = 2, nlag = 2, inctemp = 25, nwindow = 5, pwindow = 5, nullwindow = 0)</code></pre>
 </div>
 <div id="graphic-visualization" class="section level5">
 <h5>3. Graphic Visualization</h5>
@@ -160,8 +162,7 @@ Boffed &lt;- bof(object = Data2, pT = 1, nT = -1.4, obs.lag = 2, plag = 2, nlag 
 <li>The bof.plot() is a simpler version of plot.bof.correct() which has more parameters.</li>
 <li>If those parameters values seems fine, you can summarize the data from an object processed with bof()</li>
 </ul>
-<pre class="r"><code>source(&quot;PlottingFunctions.R&quot;)
-#Let's pick a date to plot
+<pre class="r"><code>#Let's pick a date to plot
 head(Boffed)
 plot.bof.correct(Boffed, tdif = 2, date = &quot;2012-05-25&quot;, date.format = &quot;%Y-%m-%d&quot;, pch = 19, cex = 0.3)</code></pre>
 </div>
@@ -170,8 +171,7 @@ plot.bof.correct(Boffed, tdif = 2, date = &quot;2012-05-25&quot;, date.format = 
 <ul>
 <li>table.bof() creates a table with all the bouts.</li>
 </ul>
-<pre class="r"><code>source(&quot;SummarizeFunctions.R&quot;)
-BoutTable &lt;- table.bof(Boffed, obs.lag = 2, dur.units = &quot;mins&quot;, ID = &quot;NestBox4-2010&quot;) 
+<pre class="r"><code>BoutTable &lt;- table.bof(Boffed, obs.lag = 2, dur.units = &quot;mins&quot;, ID = &quot;NestBox4-2010&quot;) 
 #The argument ID is useful if you want to add an ID column (e.g. if you bind multiple nestbox)</code></pre>
 <ul>
 <li>This table is usefull for finding atypical bouts. e.g. We can look the long bouts.</li>
@@ -179,9 +179,10 @@ BoutTable &lt;- table.bof(Boffed, obs.lag = 2, dur.units = &quot;mins&quot;, ID 
 <pre class="r"><code>hist(BoutTable$duration, breaks = 100)
 LongBouts &lt;- BoutTable[BoutTable$duration &gt; 100, ]</code></pre>
 <ul>
-<li>day.sum() function</li>
+<li>day.sum() function takes as an input an object processed with bof() and returns a table with incubation behaviour informations. The information is sorted by days. Day/Night can also be separedted.</li>
 </ul>
-<pre class="r"><code>a &lt;- day.sum(object = Boffed, obs.lag = 2, sunrise = &quot;06:00:00&quot;, sunset = &quot;20:00:00&quot;, ID = &quot;Test&quot;, time.format = &quot;%H:%M:%S&quot;)</code></pre>
+<pre class="r"><code>DayTable &lt;- day.sum(Boffed, obs.lag = 2, ID = &quot;NestBox4-2010&quot;) 
+DayTable2 &lt;- day.sum(object = Boffed, obs.lag = 2, sunrise = &quot;06:00:00&quot;, sunset = &quot;20:00:00&quot;, ID = &quot;NestBox4-2010&quot;, time.format = &quot;%H:%M:%S&quot;)</code></pre>
 </div>
 </div>
 </div>
