@@ -1,108 +1,107 @@
 # In developpment; A function for summarizing data by day
-# Still some work to be done... because the current version determines whether a bout stared during the day or night, 
-# this would result in night duration not being all equal... 
-
 
 # Debugger ####
-rm(list = ls())
-source("Bof.R")
-source("SummarizeFunctions.R")
+# rm(list = ls())
+# source("Bof.R")
+# source("SummarizeFunctions.R")
+# 
+# DayNightData<- read.table("DayNightData.csv", sep = ",", header = TRUE)
+# boffed <- bof(object = DayNightData)
+# # BoutTable <- table.bof(boffed, obs.lag = 2, ID = "NestBox1-2012", dur.units = "mins")
+# 
+# object = BoutTable; sunrise = NULL; sunset = NULL; ID = "Test"; obs.lag = 2; time.format = NULL
+object = Boffed; sunrise = "06:00:00"; sunset = "20:00:00"; ID = "Test"; time.format = "%H:%M:%S"; obs.lag = 2
+library(plyr)
 
-DayNightData<- read.table("DayNightData.csv", sep = ",", header = TRUE)
-boffed <- bof(object = DayNightData)
-# BoutTable <- table.bof(boffed, obs.lag = 2, ID = "NestBox1-2012", dur.units = "mins")
+# Day.sum 
 
-#object = BoutTable; sunrise = NULL; sunset = NULL; ID = "Test"
-object = boffed; sunrise = "06:00:00"; sunset = "20:00:00"; ID = "Test"; time.format = "%H:%M:%S"; obs.lag = 2
-
-# Day.sum ####
-
-day.sum <- function(object = NULL, sunrise = NULL, sunset = NULL, obs.lag = NULL) {
+day.sum <- function(object, sunrise = NULL, sunset = NULL, obs.lag = NULL, time.format ="%H:%M:%S" , ID = NULL) {
 
 # Using an table.bof output ####   
-  if(is.null(sunrise) & is.null(sunset)){
-    object$Date <- strftime(object$BeginTime, format = "%Y-%m-%d")
-
-    TimeIn <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "Date"]), FUN = sum)
-    colnames(TimeIn) <- c("Date", "TimeIn")
-    TimeOut <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "Date"]), FUN = sum)
-    colnames(TimeOut) <- c("Date", "TimeOut")
-
-    MeanOnDur <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "Date"]), FUN = mean)
-    colnames(MeanOnDur) <- c("Date", "MeanOnDur")
-    MeanOffDur <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "Date"]), FUN = mean)
-    colnames(MeanOffDur) <- c("Date", "MeanOffDur")
-
-    OnCount <-  aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "Date"]), FUN = length)
-    colnames(OnCount) <- c("Date", "OnCount")
-    OffCount <-  aggregate(x = object[object$typ == "out", "typ"], by = list(object[object$typ == "out", "Date"]), FUN = length)
-    colnames(OffCount) <- c("Date", "OffCount")
-
-    MeanOnT <-  aggregate(x = object[object$typ == "in", "meanT"], by = list(object[object$typ == "in", "Date"]), FUN = mean)
-    colnames(MeanOnT) <- c("Date", "MeanOnT")
-    MeanOffT <-  aggregate(x = object[object$typ == "out", "meanT"], by = list(object[object$typ == "out", "Date"]), FUN = mean)
-    colnames(MeanOffT) <- c("Date", "MeanOffT")
-
-    minT <-  aggregate(x = object[, "minT"], by = list(object[, "Date"]), FUN = min)
-    colnames(minT) <- c("Date", "MinT")
-    maxT <-  aggregate(x = object[, "maxT"], by = list(object[, "Date"]), FUN = max)
-    colnames(maxT) <- c("Date", "maxT")
-
-    DayTable <- join_all(dfs = list(TimeIn, TimeOut, MeanOnDur, MeanOffDur, OnCount, OffCount, MeanOnT, MeanOffT, minT, maxT),
-                by = "Date", match = "all")
-  }
-
-  if(!is.null(sunrise) & !is.null(sunset) & !is.null(time.format)){
-
-    object$time <- strptime(strftime(object$BeginTime, format = "%H:%M:%S"), format = "%H:%M:%S")
-    object$period <- ifelse(object$time > strptime(sunrise, format = "%H:%M:%S") & object$time < strptime(sunset, format = "%H:%M:%S"), "Day", "Night")
-    object$date <- strptime(strftime(object$BeginTime, format = "%Y-%m-%d"), format = "%Y-%m-%d")
-
-    object[object$period == "Night" & object$time <= strptime(sunrise, format = "%H:%M:%S"), ]$date <-
-      object[object$period == "Night" & object$time <= strptime(sunrise, format = "%H:%M:%S"), ]$date - days(1)
-
-    object$date.period <- paste(strftime(object$date, format = "%Y-%m-%d"), object$period, sep = "")
-    object <- object[ , -c(which(colnames(object) == "time"), which(colnames(object) == "date"))]
-
-    ####
-    TimeIn <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "date.period"]), FUN = sum)
-    colnames(TimeIn) <- c("date.period", "TimeIn")
-    TimeOut <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "date.period"]), FUN = sum)
-    colnames(TimeOut) <- c("date.period", "TimeOut")
-
-    MeanOnDur <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "date.period"]), FUN = mean)
-    colnames(MeanOnDur) <- c("date.period", "MeanOnDur")
-    MeanOffDur <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "date.period"]), FUN = mean)
-    colnames(MeanOffDur) <- c("date.period", "MeanOffDur")
-
-    OnCount <-  aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "date.period"]), FUN = length)
-    colnames(OnCount) <- c("date.period", "OnCount")
-    OffCount <-  aggregate(x = object[object$typ == "out", "typ"], by = list(object[object$typ == "out", "date.period"]), FUN = length)
-    colnames(OffCount) <- c("date.period", "OffCount")
-
-    MeanOnT <-  aggregate(x = object[object$typ == "in", "meanT"], by = list(object[object$typ == "in", "date.period"]), FUN = mean)
-    colnames(MeanOnT) <- c("date.period", "MeanOnT")
-    MeanOffT <-  aggregate(x = object[object$typ == "out", "meanT"], by = list(object[object$typ == "out", "date.period"]), FUN = mean)
-    colnames(MeanOffT) <- c("date.period", "MeanOffT")
-
-    minT <- aggregate(x = object[, "minT"], by = list(object[, "date.period"]), FUN = min)
-    colnames(minT) <- c("date.period", "MinT")
-    maxT <-  aggregate(x = object[, "maxT"], by = list(object[, "date.period"]), FUN = max)
-    colnames(maxT) <- c("date.period", "maxT")
-
-    DayTable <- join_all(dfs = list(TimeIn, TimeOut, MeanOnDur, MeanOffDur, OnCount, OffCount, MeanOnT, MeanOffT, minT, maxT),
-                         by = "date.period", match = "all")
-  }
+  # if(is.null(sunrise) & is.null(sunset)){
+  #   object$Date <- strftime(object$BeginTime, format = "%Y-%m-%d")
+  # 
+  #   TimeIn <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "Date"]), FUN = sum)
+  #   colnames(TimeIn) <- c("Date", "TimeIn")
+  #   TimeOut <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "Date"]), FUN = sum)
+  #   colnames(TimeOut) <- c("Date", "TimeOut")
+  # 
+  #   MeanOnDur <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "Date"]), FUN = mean)
+  #   colnames(MeanOnDur) <- c("Date", "MeanOnDur")
+  #   MeanOffDur <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "Date"]), FUN = mean)
+  #   colnames(MeanOffDur) <- c("Date", "MeanOffDur")
+  # 
+  #   OnCount <-  aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "Date"]), FUN = length)
+  #   colnames(OnCount) <- c("Date", "OnCount")
+  #   OffCount <-  aggregate(x = object[object$typ == "out", "typ"], by = list(object[object$typ == "out", "Date"]), FUN = length)
+  #   colnames(OffCount) <- c("Date", "OffCount")
+  # 
+  #   MeanOnT <-  aggregate(x = object[object$typ == "in", "meanT"], by = list(object[object$typ == "in", "Date"]), FUN = mean)
+  #   colnames(MeanOnT) <- c("Date", "MeanOnT")
+  #   MeanOffT <-  aggregate(x = object[object$typ == "out", "meanT"], by = list(object[object$typ == "out", "Date"]), FUN = mean)
+  #   colnames(MeanOffT) <- c("Date", "MeanOffT")
+  # 
+  #   minT <-  aggregate(x = object[, "minT"], by = list(object[, "Date"]), FUN = min)
+  #   colnames(minT) <- c("Date", "MinT")
+  #   maxT <-  aggregate(x = object[, "maxT"], by = list(object[, "Date"]), FUN = max)
+  #   colnames(maxT) <- c("Date", "maxT")
+  # 
+  #   DayTable <- join_all(dfs = list(TimeIn, TimeOut, MeanOnDur, MeanOffDur, OnCount, OffCount, MeanOnT, MeanOffT, minT, maxT),
+  #               by = "Date", match = "all")
+  # }
+  # 
+  # if(!is.null(sunrise) & !is.null(sunset) & !is.null(time.format)){
+  # 
+  #   object$time <- strptime(strftime(object$BeginTime, format = "%H:%M:%S"), format = "%H:%M:%S")
+  #   object$period <- ifelse(object$time > strptime(sunrise, format = "%H:%M:%S") & object$time < strptime(sunset, format = "%H:%M:%S"), "Day", "Night")
+  #   object$date <- strptime(strftime(object$BeginTime, format = "%Y-%m-%d"), format = "%Y-%m-%d")
+  # 
+  #   object[object$period == "Night" & object$time <= strptime(sunrise, format = "%H:%M:%S"), ]$date <-
+  #     object[object$period == "Night" & object$time <= strptime(sunrise, format = "%H:%M:%S"), ]$date - days(1)
+  # 
+  #   object$date.period <- paste(strftime(object$date, format = "%Y-%m-%d"), object$period, sep = "")
+  #   object <- object[ , -c(which(colnames(object) == "time"), which(colnames(object) == "date"))]
+  # 
+  #   ###
+  #   TimeIn <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "date.period"]), FUN = sum)
+  #   colnames(TimeIn) <- c("date.period", "TimeIn")
+  #   TimeOut <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "date.period"]), FUN = sum)
+  #   colnames(TimeOut) <- c("date.period", "TimeOut")
+  # 
+  #   MeanOnDur <- aggregate(x = object[object$typ == "in", "duration"], by = list(object[object$typ == "in", "date.period"]), FUN = mean)
+  #   colnames(MeanOnDur) <- c("date.period", "MeanOnDur")
+  #   MeanOffDur <- aggregate(x = object[object$typ == "out", "duration"], by = list(object[object$typ == "out", "date.period"]), FUN = mean)
+  #   colnames(MeanOffDur) <- c("date.period", "MeanOffDur")
+  # 
+  #   OnCount <-  aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "date.period"]), FUN = length)
+  #   colnames(OnCount) <- c("date.period", "OnCount")
+  #   OffCount <-  aggregate(x = object[object$typ == "out", "typ"], by = list(object[object$typ == "out", "date.period"]), FUN = length)
+  #   colnames(OffCount) <- c("date.period", "OffCount")
+  # 
+  #   MeanOnT <-  aggregate(x = object[object$typ == "in", "meanT"], by = list(object[object$typ == "in", "date.period"]), FUN = mean)
+  #   colnames(MeanOnT) <- c("date.period", "MeanOnT")
+  #   MeanOffT <-  aggregate(x = object[object$typ == "out", "meanT"], by = list(object[object$typ == "out", "date.period"]), FUN = mean)
+  #   colnames(MeanOffT) <- c("date.period", "MeanOffT")
+  # 
+  #   minT <- aggregate(x = object[, "minT"], by = list(object[, "date.period"]), FUN = min)
+  #   colnames(minT) <- c("date.period", "MinT")
+  #   maxT <-  aggregate(x = object[, "maxT"], by = list(object[, "date.period"]), FUN = max)
+  #   colnames(maxT) <- c("date.period", "maxT")
+  # 
+  #   DayTable <- join_all(dfs = list(TimeIn, TimeOut, MeanOnDur, MeanOffDur, OnCount, OffCount, MeanOnT, MeanOffT, minT, maxT),
+  #                        by = "date.period", match = "all")
+  # }
 
 
 # Using an bof output ####
   
+  # Seperate Night/Day
   
   if(!is.null(sunrise) & !is.null(sunset) & !is.null(time.format)) {
     object$DateTime <- strptime(object$DateTime, format = "%Y-%m-%d %H:%M:%S")
     object$date <- strptime(object$DateTime, format = "%Y-%m-%d")
     object$time <- strptime(strftime(object$DateTime, format = "%H:%M:%S"), format = "%H:%M:%S")
-    object$period <- ifelse(object$time > strptime(sunrise, format = "%H:%M:%S") & object$time < strptime(sunset, format = "%H:%M:%S"), "Day", "Night")
+    object$period <- ifelse(object$time > strptime(sunrise, format = time.format) & object$time < strptime(sunset, format = time.format), "Day", "Night")
     object[object$period == "Night" & object$time < strptime(sunrise, format = "%H:%M:%S"), ]$date <- object[object$period == "Night" & object$time < strptime(sunrise, format = "%H:%M:%S"), ]$date - days(1)
 
     object <- object[, -which(colnames(object) == "time")]
@@ -166,16 +165,17 @@ day.sum <- function(object = NULL, sunrise = NULL, sunset = NULL, obs.lag = NULL
     DayTable$period <- substr(DayTable$date.period, 11, nchar(DayTable$date.period))
     
     DayTable <- cbind(DayTable[, c(which(colnames(DayTable) == c("date", "period")))], DayTable[, -c(which(colnames(DayTable) == c("date.period","date", "period")))])
-  }   
+    
+    if(!is.null(ID)) {
+      DayTable <- cbind(ID, DayTable)
+    }   
+  }
   
-  if(is.null(sunrise) & is.null(sunset) & is.null(time.format)) {
+  # Night and Day together
+  
+  if(is.null(sunrise) & is.null(sunset)) {
     object$DateTime <- strptime(object$DateTime, format = "%Y-%m-%d %H:%M:%S")
     object$date <- strftime(object$DateTime, format = "%Y-%m-%d")
-    # object$time <- strptime(strftime(object$DateTime, format = "%H:%M:%S"), format = "%H:%M:%S")
-    # object$period <- ifelse(object$time > strptime(sunrise, format = "%H:%M:%S") & object$time < strptime(sunset, format = "%H:%M:%S"), "Day", "Night")
-    # object <- object[, -which(colnames(object) == "time")]
-    # object$date.period <- paste(object$date, object$period, sep = "")
-    
     
     TimeIn <- aggregate(x = object[object$typ == "in", "typ"], by = list(object[object$typ == "in", "date"]), FUN = length)
     colnames(TimeIn) <- c("date", "TimeIn")
@@ -230,7 +230,12 @@ day.sum <- function(object = NULL, sunrise = NULL, sunset = NULL, obs.lag = NULL
                          by = "date", match = "all")
     DayTable$IncCon <- (DayTable$TimeIn)/(DayTable$TimeIn + DayTable$TimeOut)
     
-    DayTable <- cbind(DayTable$date, DayTable[, -c(which(colnames(DayTable) == c("date", "period")))])
-    colnames(DayTable)[1] <- "date" 
+    if(!is.null(ID)) {
+      DayTable <- cbind(ID, DayTable$date, DayTable[, -c(which(colnames(DayTable) == c("date", "period")))])
+      colnames(DayTable)[2] <- "date"
+    } else { 
+      DayTable <- cbind(DayTable$date, DayTable[, -c(which(colnames(DayTable) == c("date", "period")))])
+      colnames(DayTable)[1] <- "date"
+    }
   }     
 }  
