@@ -1,5 +1,6 @@
 #Creates a table from an object processed by bof()
 library(lubridate)
+library(plyr)
 # Debugger ####
 # source("Bof.R")
 # source("SummarizeFunctions.R")
@@ -9,6 +10,7 @@ library(lubridate)
 # 
 # object = boffed; obs.lag = 2; ID = "Test"; dur.units = "mins"
 # ###
+
 
 # Table.bof ####
 
@@ -56,7 +58,18 @@ table.bof <- function(object, obs.lag = 2, ID = NULL, dur.units = "mins"){
   return(table)
 }
 
-# Day.sum 
+# Day.sum ####
+
+# Debugger
+# rm(list = ls())
+# source("Bof.R")
+# source("SummarizeFunctions.R")
+# 
+# DayNightData<- read.table("DayNightData.csv", sep = ",", header = TRUE)
+# boffed <- bof(object = DayNightData)
+# # BoutTable <- table.bof(boffed, obs.lag = 2, ID = "NestBox1-2012", dur.units = "mins")
+# 
+# object = boffed; sunrise = NULL; sunset = NULL; ID = "Test"; obs.lag = 2; time.format = NULL
 
 day.sum <- function(object, sunrise = NULL, sunset = NULL, obs.lag = NULL, time.format ="%H:%M:%S" , ID = NULL) {
   
@@ -206,4 +219,5 @@ day.sum <- function(object, sunrise = NULL, sunset = NULL, obs.lag = NULL, time.
     }
   }     
 
+DayTable  
 }  

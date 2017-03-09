@@ -60,8 +60,9 @@ BoutTable <- table.bof(Boffed, obs.lag = 2, dur.units = "mins", ID = "NestBox4-2
 hist(BoutTable$duration, breaks = 100)
 LongBouts <- BoutTable[BoutTable$duration > 100, ]
 ```
-+ day.sum() function
++ day.sum() function takes as an input an object processed with bof() and returns a table with incubation behaviour informations. The information is sorted by days. Day/Night can also be separedted.
 ```{r eval = FALSE}
-a <- day.sum(object = Boffed, obs.lag = 2, sunrise = "06:00:00", sunset = "20:00:00", ID = "Test", time.format = "%H:%M:%S")
+DayTable <- day.sum(Boffed, obs.lag = 2, ID = "NestBox4-2010") 
+DayTable2 <- day.sum(object = Boffed, obs.lag = 2, sunrise = "06:00:00", sunset = "20:00:00", ID = "Test", time.format = "%H:%M:%S")
 ```
 
