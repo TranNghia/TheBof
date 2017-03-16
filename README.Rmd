@@ -1,0 +1,68 @@
+
+# TheBof
+Hi, 
+Thank you for your interest in our work. 
+
+Theses functions were built in order to analyse temperature data in order to determine incubation behaviour in avian species.
+
+These functions are usable but need to be formated into a package format. Also, the functions need to be optimized in order to speed up the analysis process. Improvement can be made by  a more straighforward engineering process or vectorisation of the many loops.
+
+Files should also be organized in a more conventional layout. (instead of having everything thrown into one folder...)
+
+If you have any modification, feel free to communicate with Nghia Tran at tran.ng91@gmail.com
+
+Also part of the developpment process; Gabriel Pigeon, Fanie Pelletier and Julien Martin
+
+## Work Flow exemple
+
+##### 1. Importing data
++ Data should be formated as a two columns object. The first column is a date time object. The second column is the temperature readings. Because of the date time format of the first column, CSV files are ideal. The txt.converter can be used to convert a space delimited file to a compatible format with the function.
+```{r eval = FALSE}
+rm(list = ls())
+file.sources = paste("R/", list.files(path = "R", pattern = "*.R"), sep = "")
+sapply(file.sources,source, .GlobalEnv)
+rm(file.sources)
+
+Data <- read.table("data/DayNightData.txt", header = FALSE) # This is a .txt file that is not yet ready to be processed with the function
+head(Data)
+str(Data)
+```
++  We can use the txt.convert function to transform the data.frame
+```{r eval = FALSE}
+Data2 <- txt.converter(table = Data, date.col = 1, time.col = 2, temp.col = 3, date.format = "%m/%d/%y", time.format = "%H:%M:%S" )
+str(Data2)
+```
+
+##### 2. Processing the data
++ Bof() is the main function. This is the one that will determine on- and off bouts. For now, help menu is not existant but the arguments meaning are available in the Bof.R script.
+```{r eval = FALSE}
+Boffed <- bof(object = Data2, pT = 1, nT = -1.4, obs.lag = 2, plag = 2, nlag = 2, inctemp = 25, nwindow = 5, pwindow = 5, nullwindow = 0)
+```
+
+##### 3. Graphic Visualization 
++ We can have a quick look at if the parameters previously entered in the bof() function are OK.
++ The bof.plot() is a simpler version of plot.bof.correct() which has more parameters.
++ If those parameters values seems fine, you can summarize the data from an object processed with bof()
+```{r eval = FALSE}
+#Let's pick a date to plot
+head(Boffed)
+plot.bof.correct(Boffed, tdif = 2, date = "2012-05-25", date.format = "%Y-%m-%d", pch = 19, cex = 0.3)
+```
+
+##### 4. Data Summarization
++ table.bof() creates a table with all the bouts. 
+```{r eval = FALSE}
+BoutTable <- table.bof(Boffed, obs.lag = 2, dur.units = "mins", ID = "NestBox4-2010") 
+#The argument ID is useful if you want to add an ID column (e.g. if you bind multiple nestbox)
+```
++ This table is usefull for finding atypical bouts. e.g. We can look the long bouts.
+```{r eval = FALSE}
+hist(BoutTable$duration, breaks = 100)
+LongBouts <- BoutTable[BoutTable$duration > 100, ]
+```
++ day.sum() function takes as an input an object processed with bof() and returns a table with incubation behaviour informations. The information is sorted by days. Day/Night can also be separedted.
+```{r eval = FALSE}
+DayTable <- day.sum(Boffed, obs.lag = 2, ID = "NestBox4-2010") 
+DayTable2 <- day.sum(object = Boffed, obs.lag = 2, sunrise = "06:00:00", sunset = "20:00:00", ID = "NestBox4-2010", time.format = "%H:%M:%S")
+```
+
