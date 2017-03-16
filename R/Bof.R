@@ -3,9 +3,9 @@
 # rm(list=ls())
 
 # Debugger
-# object <- read.table("DayData.csv", header = TRUE, sep = ",")
-# pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 0
-
+# object <- read.table("data/DayData.csv", header = TRUE, sep = ",")
+# pos=2; control=NA; pT=1; nT=-1.4; plag=2; nlag=2; obs.lag=2; time.format="%Y-%m-%d %H:%M:%S" ;crit=1; inctemp = 25; nwindow = 5; pwindow = 6; nullwindow = 1
+#
 
 #Argugument Legends
 #bof()
@@ -169,8 +169,8 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   if(nrow(dat > 0)) {
     rn2 <- c(NA, (dat[c(1:nrow(dat)-1), "rn"] + 1))
     dat <- cbind(dat, rn2)
-    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, -1)
-    dat$eq[1] <- -1
+    dat$eq <- ifelse(dat$rn == dat$rn2 & dat$tdif <= obs.lag, 0, 1)
+    dat$eq[1] <- 1
     dat$Z <- cumsum(dat$eq)
 
     object$numneg <- ifelse(object$rn %in% dat$rn, dat$Z[match(object$rn, dat$rn)], NA)
@@ -244,13 +244,10 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   #
   dat <- object[object$sum >= pT & !is.na(object$sum), ]
   if(nrow(dat) > 0){
-    if(length(unique(dat$numneg)) > 1) {
-      cumsum <- aggregate(dat$dif, by = list(dat$numpos), FUN = cumsum)
-      dat$cumsum <- unlist(cumsum$x)
-    } else {
-      cumsum <- cumsum(dat$dif)
-      dat$cumsum <- cumsum
-    }    
+    
+    cumsum <- tapply(dat$dif, dat$numpos, FUN = cumsum, simplify = FALSE)
+    dat$cumsum <- unlist(cumsum)
+  
     dat$a <- ifelse(dat$cumsum >= pT, 0, 1)
     sum <- aggregate(dat$a, by = list(dat$numpos), sum)
     colnames(sum) <- c("numpos", "pTle")
@@ -277,15 +274,10 @@ bof <- function(object,pos=2,control=NA,pT=1,nT=-1,plag=2,nlag=2,obs.lag=2,time.
   
   dat <- object[object$sum <= nT & !is.na(object$sum), ]
   if (nrow(dat) > 0) {
-    if(length(unique(dat$numneg)) > 1) {
-      cumsum <- aggregate(dat$dif, by = list(dat$numneg), FUN = cumsum)
-      cumsum <- cumsum[order(cumsum$Group.1, decreasing = TRUE), ]
-      dat$cumsum <- unlist(cumsum$x)
-    } else {
-      cumsum <- cumsum(dat$dif)
-      dat$cumsum <- cumsum
-    }
-    
+
+    cumsum <- tapply(dat$dif, dat$numneg, FUN = cumsum, simplify = FALSE)
+    dat$cumsum <- unlist(cumsum)
+
     dat$a <- ifelse(dat$cumsum <= nT, 0, 1)
     sum <- aggregate(dat$a, by = list(dat$numneg), sum)
     colnames(sum) <- c("numneg", "nTle")

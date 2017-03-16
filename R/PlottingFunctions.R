@@ -132,7 +132,7 @@ plot.bof.correct <- function(object, tdif = 2, nbout = NA, from = NA, to = NA, t
     for(i in offbout){
       offbout2 <- subset(object2, num == i) 
       a = min(offbout2$DateTime) - tdif*60
-      rect(a, min(object2$temp) ,max(offbout2$DateTime), max(object2$temp), col = rgb(0, 0.5, 1, alpha=0.1))
+      rect(a, min(object2$temp) ,max(offbout2$DateTime), max(object2$temp), col = rgb(0, 0.5, 1, alpha=0.3))
       if(off.window.num == TRUE){
         text(min(offbout2$DateTime), min(object2$temp), labels = i, bg = "white", cex = 0.8, col = "red")
       }
